@@ -1,4 +1,4 @@
-name: 数据库备份（永不报错）
+name: 数据库备份（终极无错版）
 
 on:
   schedule:
@@ -9,18 +9,19 @@ jobs:
   backup:
     runs-on: ubuntu-latest
     steps:
-      - name: 安装 MySQL 客户端
+      - name: 安装客户端
         run: sudo apt-get update && sudo apt-get install -y mysql-client
 
       - name: 备份数据库
         run: |
           DATE=$(date +%Y%m%d_%H%M%S)
-          mysqldump -h ${{ secrets.DB_HOST }} \
-                    -u ${{ secrets.DB_USER }} \
-                    -p${{ secrets.DB_PASS }} \
-                    ${{ secrets.DB_NAME }} | gzip > backup_$DATE.sql.gz
+          mysqldump --host=${{ secrets.DB_HOST }} \
+                    --user=${{ secrets.DB_USER }} \
+                    --password=${{ secrets.DB_PASS }} \
+                    ${{ secrets.DB_NAME }} > backup_$DATE.sql
+          gzip backup_$DATE.sql
 
-      - name: 上传备份文件
+      - name: 上传备份
         uses: actions/upload-artifact@v4
         with:
           name: database-backup
