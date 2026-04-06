@@ -1,4 +1,4 @@
-name: 数据库备份（无警告 + 无权限错误）
+name: 数据库备份（纯原生 无警告）
 
 on:
   schedule:
@@ -10,27 +10,24 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true  # 强制 Node24，消除警告
 
     steps:
-      - name: 检出代码
-        uses: actions/checkout@v4
+      - name: Checkout
+        run: |
+          git clone https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git .
+          git config user.name "Backup"
+          git config user.email "actions@github.com"
 
-      - name: 安装 MySQL 客户端
-        run: sudo apt-get install -y mysql-client
+      - name: 安装 MySQL
+        run: sudo apt install -y mysql-client
 
-      - name: 导出数据库备份
+      - name: 备份数据库
         run: |
           DATE=$(date +%Y%m%d_%H%M%S)
-          echo "DATE=$DATE" >> $GITHUB_ENV
-          mysqldump -h ${{ secrets.DB_HOST }} \
-                    -u ${{ secrets.DB_USER }} \
-                    -p${{ secrets.DB_PASS }} \
-                    ${{ secrets.DB_NAME }} | gzip > backup_$DATE.sql.gz
+          mysqldump -h ${{ secrets.DB_HOST }} -u ${{ secrets.DB_USER }} -p${{ secrets.DB_PASS }} ${{ secrets.DB_NAME }} | gzip > backup_$DATE.sql.gz
 
-      - name: 提交备份文件
-        uses: EndBug/add-and-commit@v9
-        with:
-          message: "数据库备份 ${{ env.DATE }}"
-          add: '*.sql.gz'
+      - name: 上传文件
+        run: |
+          git add *.sql.gz
+          git commit -m "备份 $DATE"
+          git push
