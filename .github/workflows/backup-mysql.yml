@@ -1,28 +1,35 @@
-name: 数据库备份（终极无错版）
-
+name: MySQL备份 终极版
 on:
+  workflow_dispatch:
   schedule:
     - cron: '0 2 * * *'
-  workflow_dispatch:
 
 jobs:
   backup:
     runs-on: ubuntu-latest
     steps:
       - name: 安装客户端
-        run: sudo apt-get update && sudo apt-get install -y mysql-client
+        run: sudo apt update && sudo apt install -y mysql-client
 
-      - name: 备份数据库
+      - name: 测试数据库连接
+        run: |
+          mysql --host=${{ secrets.DB_HOST }} \
+                --user=${{ secrets.DB_USER }} \
+                --password=${{ secrets.DB_PASS }} \
+                -e "SELECT 1;"
+
+      - name: 执行备份
         run: |
           DATE=$(date +%Y%m%d_%H%M%S)
           mysqldump --host=${{ secrets.DB_HOST }} \
                     --user=${{ secrets.DB_USER }} \
                     --password=${{ secrets.DB_PASS }} \
+                    --default-character-set=utf8mb4 \
                     ${{ secrets.DB_NAME }} > backup_$DATE.sql
           gzip backup_$DATE.sql
 
-      - name: 上传备份
+      - name: 上传备份文件
         uses: actions/upload-artifact@v4
         with:
-          name: database-backup
+          name: backup
           path: backup_*.sql.gz
